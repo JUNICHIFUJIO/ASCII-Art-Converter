@@ -11,6 +11,56 @@ namespace PNGHandler
    /// </summary>
    class PNG_Chunk
    {
+      public PNG_Chunk(byte[] chunk_data, ref int byte_index)
+      {
+         if (chunk_data == null)
+         {
+            throw new System.ArgumentNullException();
+         }
+         if (byte_index >= chunk_data.Length
+            || chunk_data.Length - byte_index < 12)
+         {
+            throw new System.ArgumentException("PNG_Chunk: Passed invalid byte_index.");
+         }
+         else if (chunk_data.Length < 12)
+         {
+            throw new System.ArgumentException("PNG_Chunk: Invalid chunk data passed.");
+         }
+
+         // gather chunk data
+         // 1) 4 bytes: length of chunk data
+         chunk_length_p = (int)chunk_data[byte_index++];
+         for (int i = 1; i < 4; i++)
+         {
+            chunk_length_p = chunk_length_p << 8;
+            chunk_length_p += (int)chunk_data[byte_index++];
+         }
+
+         // 2) 4 bytes: chunk name
+          System.Text.StringBuilder sb = new System.Text.StringBuilder();
+         for (int i = 0; i < 4; i++)
+         {
+            sb.Append((char)chunk_data[byte_index++]);
+         }
+         chunk_name_p = sb.ToString();
+
+         // 3) Variable length: chunk data
+         chunk_data_p = new byte[chunk_length_p];
+         for (int i = 0; i < chunk_length_p; i++)
+         {
+            chunk_data_p[i] = chunk_data[byte_index++];
+         }
+         // chunk_data.CopyTo(chunk_data_p, 0);
+         //byte_index += chunk_length_p;
+
+         // 4) 4 bytes: CRC
+         chunk_CRC_p = new byte[4];
+         for (int i = 0; i < 4; i++)
+         {
+            chunk_CRC_p[i] = chunk_data[byte_index++];
+         }
+      }
+
       /// <summary>
       /// Construct a PNG data chunk from a string of bytes. The string is truncated by the amount of a chunk and passed back.
       /// </summary>
@@ -34,6 +84,7 @@ namespace PNGHandler
          chunk_length_p = interpret_chunk_length_string(chunk_length_str);
          // get the chunk's actual data
          string chunk_data_str = chunk_data.Substring(8, chunk_length);
+         datastream_p = chunk_data_str;
          chunk_data_p = str_to_byte_arr(chunk_data_str);
          // get the chunk's CRC
          string chunk_CRC_str = chunk_data.Substring(8 + chunk_length, 4);
@@ -164,6 +215,7 @@ namespace PNGHandler
       private string chunk_name_p;
       private int chunk_length_p;
       private byte[] chunk_data_p;
+      private string datastream_p;
       //private string chunk_data_p;
       private byte[] chunk_CRC_p;
 
@@ -182,6 +234,10 @@ namespace PNGHandler
       }
       public byte[] chunk_data{
          get { return chunk_data_p; }
+      }
+      public string datastream
+      {
+         get { return datastream_p; }
       }
       public byte[] chunk_CRC{
          get { return chunk_CRC_p; }
